@@ -113,6 +113,7 @@ class Settings:
     gid_start: int = 10000
     default_gid: int | None = None
     primary_group: str = "lldap_users"
+    excluded_users: frozenset[str] = frozenset()
     home_root: str = "/home"
     login_shell: str = "/bin/sh"
     interval_seconds: int = 300
@@ -135,6 +136,11 @@ class Settings:
             gid_start=int(os.getenv("POSIX_GID_START", "10000")),
             default_gid=(int(os.environ["POSIX_DEFAULT_GID"]) if os.getenv("POSIX_DEFAULT_GID", "").strip() else None),
             primary_group=os.getenv("POSIX_PRIMARY_GROUP", "lldap_users").strip(),
+            excluded_users=frozenset(
+                value.strip().lower()
+                for value in os.getenv("POSIX_EXCLUDE_USERS", "").split(",")
+                if value.strip()
+            ),
             home_root=os.getenv("POSIX_HOME_ROOT", "/home").rstrip("/"),
             login_shell=os.getenv("POSIX_LOGIN_SHELL", "/bin/sh"),
             interval_seconds=max(10, int(os.getenv("POSIX_INTERVAL_SECONDS", "300"))),
@@ -327,6 +333,8 @@ def reconcile(client: LldapClient, settings: Settings) -> dict[str, Any]:
 
     user_plan: list[dict[str, Any]] = []
     for user in users:
+        if user["id"].lower() in settings.excluded_users:
+            continue
         attrs = attributes_by_name(user)
         allocation = int(first_value(attrs, "uidnumber") or state["next_uid"])
         change = plan_user(user, allocation, settings, primary_gid)
@@ -342,6 +350,7 @@ def reconcile(client: LldapClient, settings: Settings) -> dict[str, Any]:
         "groupUpdates": group_plan,
         "selectedPrimaryGid": primary_gid,
         "warnings": warnings,
+        "excludedUsers": sorted(settings.excluded_users),
         "groupInventory": [
             {
                 "id": group["id"],
