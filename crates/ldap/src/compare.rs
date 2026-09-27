@@ -238,5 +238,20 @@ mod tests {
                 referral: vec![],
             })])
         );
+
+        let request = LdapCompareRequest {
+            dn: dn.to_string(),
+            atype: "memberUid".to_owned(),
+            val: b"bob".to_vec(),
+        };
+        assert_eq!(
+            ldap_handler.do_compare(request).await,
+            Ok(vec![LdapOp::CompareResult(LdapResultOp {
+                code: LdapResultCode::CompareTrue,
+                matcheddn: dn.to_owned(),
+                message: "".to_string(),
+                referral: vec![],
+            })])
+        );
     }
 }
