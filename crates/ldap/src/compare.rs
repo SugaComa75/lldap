@@ -210,7 +210,7 @@ mod tests {
     async fn test_compare_group_member() {
         let mut mock = MockTestBackendHandler::new();
         mock.expect_list_users().returning(|_, _| Ok(vec![]));
-        mock.expect_list_groups().returning(|f| {
+        mock.expect_list_groups().times(2).returning(|f| {
             assert_eq!(f, Some(GroupRequestFilter::DisplayName("group".into())));
             Ok(vec![Group {
                 id: GroupId(1),
